@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工會戰分隊報名系統 V2</title>
+    <!-- 引入官方穩定版 SheetJS 用於導出 Excel -->
+    <script src="https://jsdelivr.net"></script>
+    <style>
+        :root {
+            --primary-color: #3498db; --secondary-color: #2c3e50; --background-color: #ecf0f1;
+            --card-background: #ffffff; --text-color: #333333; --error-color: #e74c3c; --success-color: #2ecc71;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: var(--background-color); color: var(--text-color); padding: 20px; }
+        .main-wrapper { max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 25px; }
+        .container { background: var(--card-background); width: 100%; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+        .tutorial-box { background-color: #fef9e7; border-left: 6px solid #f39c12; padding: 15px; border-radius: 4px; font-size: 14px; }
+        .board-title { font-size: 18px; font-weight: bold; margin-bottom: 12px; color: var(--secondary-color); text-align: center; }
+        .tactics-board { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; }
+        .t-card { padding: 12px; border-radius: 6px; border-left: 5px solid #ccc; background: #f8f9fa; font-size: 14px; }
+        .t-card.atk { border-left-color: #e74c3c; } .t-card.rr { border-left-color: #f1c40f; } .t-card.def { border-left-color: #2ecc71; }
+        .t-name { font-weight: bold; margin-bottom: 4px; font-size: 15px; }
+        h1, h2 { text-align: center; color: var(--secondary-color); margin-bottom: 10px; }
+        h1 { font-size: 24px; } h2 { font-size: 18px; border-bottom: 2px solid #ddd; padding-bottom: 8px; margin-bottom: 15px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 6px; font-weight: 600; color: var(--secondary-color); }
+        input[type="text"], select { width: 100%; padding: 10px; border: 2px solid #bdc3c7; border-radius: 6px; font-size: 15px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .btn-container { display: flex; gap: 15px; margin-top: 10px; }
+        button { flex: 1; padding: 12px; color: white; border: none; border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer; }
+        .btn-submit { background-color: var(--primary-color); } .btn-export { background-color: var(--success-color); } .btn-clear { background-color: var(--error-color); max-width: 110px; }
+        .message { margin-top: 15px; padding: 10px; border-radius: 6px; text-align: center; display: none; font-weight: 600; }
+        .message.error { background-color: #fde8e7; color: var(--error-color); display: block; } .message.success { background-color: #e8f8f0; color: var(--success-color); display: block; }
+        .table-responsive { width: 100%; overflow-x: auto; margin-top: 15px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 850px; }
+        th, td { text-align: left; padding: 10px; border-bottom: 1px solid #ddd; }
+        th { background-color: var(--secondary-color); color: white; }
+        tr:hover { background-color: #f5f5f5; }
+        .no-data { text-align: center; color: #999; padding: 20px; }
+        @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; gap: 0; } .btn-container { flex-direction: column; } .btn-clear { max-width: 100%; } }
+    </style>
+</head>
+<body>
+<div class="main-wrapper">
+
+    <!-- 📋 獨立小隊戰術職責說明看板 -->
+    <div class="container">
+        <div class="board-title">📋 各小隊戰術職責說明</div>
+        <div class="tactics-board">
+            <div class="t-card atk"><div class="t-name" style="color:#e74c3c;">⚔️ 進攻一隊</div><div>主打對面上野及上塔</div></div>
+            <div class="t-card atk"><div class="t-name" style="color:#e74c3c;">⚔️ 進攻二隊</div><div>主打對面下野及下塔</div></div>
+            <div class="t-card rr"><div class="t-name" style="color:#d35400;">🏹 游擊一隊</div><div>輔助進攻及大小龍，野怪生時佔領對面野區</div></div>
+            <div class="t-card rr"><div class="t-name" style="color:#d35400;">🏹 游擊二隊</div><div>輔助進攻及大小龍，野怪生時佔領自家野區</div></div>
+            <div class="t-card def"><div class="t-name" style="color:#2ecc71;">🛡️ 防守一隊</div><div>主守上塔及中塔，防守優先，不參與進攻及大小龍</div></div>
+            <div class="t-card def"><div class="t-name" style="color:#2ecc71;">🛡️ 防守二隊</div><div>主守下塔及中塔，輔助優先，會參與進攻及大小龍</div></div>
+        </div>
+    </div>
+
+    <!-- 填寫表單卡片 -->
+    <div class="container">
+        <h1>⚔️ 月下共渡百業戰成員建檔系統</h1>
+        <br>
+	<div class="board-title">請填寫以下資料，以方便指揮分隊及小隊成員互相了解！</div>
+        <form id="signupForm">
+            <div class="grid-2">
+                <div class="form-group"><label for="playerName">玩家遊戲暱稱</label><input type="text" id="playerName" required placeholder="請輸入您的遊戲 ID"></div>
+                <div class="form-group"><label for="partnerName">指定同隊成員 (選填)</label><input type="text" id="partnerName" placeholder="填寫想和哪位夥伴同隊"></div>
+            </div>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label for="primaryMartial">第一主修武學</label>
+                    <select id="primaryMartial" required>
+                        <option value="" disabled selected>請選擇武學</option>
+                        <option value="無名劍法">無名劍法</option><option value="無名槍法">無名槍法</option>
+                        <option value="積矩九劍">積矩九劍</option><option value="九曲驚神槍">九曲驚神槍</option>
+                        <option value="八方風雷槍">八方風雷槍</option><option value="嗟夫刀法">嗟夫刀法</option>
+                        <option value="九重春色">九重春色</option><option value="青山執筆">青山執筆</option>
+                        <option value="明川藥典">明川藥典</option><option value="千香引魂蠱">千香引魂蠱</option>
+                        <option value="泥犁三垢">泥犁三垢</option><option value="粟子游塵">粟子游塵</option>
+                        <option value="醉夢遊春">醉夢遊春</option><option value="粟子行雲">粟子行雲</option>
+                        <option value="斬雪刀法">斬雪刀法</option><option value="十方破陣">十方破陣</option>
+                        <option value="天志垂象">天志垂象</option><option value="千機索天">千機索天</option>
+                        <option value="懸身拳法">懸身拳法</option><option value="斷水雙訣">斷水雙訣</option>
+                        <option value="文动霓裳">文动霓裳</option><option value="杏游草野">杏游草野</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="secondaryMartial">第二備用武學</label>
+                    <select id="secondaryMartial" required>
+                        <option value="" disabled selected>請選擇武學</option>
+                        <option value="無名劍法">無名劍法</option><option value="無名槍法">無名槍法</option>
+                        <option value="積矩九劍">積矩九劍</option><option value="九曲驚神槍">九曲驚神槍</option>
+                        <option value="八方風雷槍">八方風雷槍</option><option value="嗟夫刀法">嗟夫刀法</option>
+                        <option value="九重春色">九重春色</option><option value="青山執筆">青山執筆</option>
+                        <option value="明川藥典">明川藥典</option><option value="千香引魂蠱">千香引魂蠱</option>
+                        <option value="泥犁三垢">泥犁三垢</option><option value="粟子游塵">粟子游塵</option>
+                        <option value="醉夢遊春">醉夢遊春</option><option value="粟子行雲">粟子行雲</option>
+                        <option value="斬雪刀法">斬雪刀法</option><option value="十方破陣">十方破陣</option>
+                        <option value="天志垂象">天志垂象</option><option value="千機索天">千機索天</option>
+                        <option value="懸身拳法">懸身拳法</option><option value="斷水雙訣">斷水雙訣</option>
+                        <option value="文动霓裳">文动霓裳</option><option value="杏游草野">杏游草野</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label for="firstChoice">分隊第一志願</label>
+                    <select id="firstChoice" required>
+                        <option value="" disabled selected>請選擇分隊</option>
+                        <option value="進攻一隊">進攻一隊</option><option value="進攻二隊">進攻二隊</option>
+                        <option value="游擊一隊">游擊一隊</option><option value="游擊二隊">游擊二隊</option>
+                        <option value="防守一隊">防守一隊</option><option value="防守二隊">防守二隊</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="secondChoice">分隊第二志願</label>
+                    <select id="secondChoice" required>
+                        <option value="" disabled selected>請選擇分隊</option>
+                        <option value="進攻一隊">進攻一隊</option><option value="進攻二隊">進攻二隊</option>
+                        <option value="游擊一隊">游擊一隊</option><option value="游擊二隊">游擊二隊</option>
+                        <option value="防守一隊">防守一隊</option><option value="防守二隊">防守二隊</option>
+                    </select>
+                </div>
+            </div>
+            <div class="btn-container">
+                <button type="submit" class="btn-submit">確認送出報名</button>
+                <button type="button" id="exportBtn" class="btn-export">匯出 Excel</button>
+                <button type="button" id="clearBtn" class="btn-clear">清空資料</button>
+            </div>
+        </form>
+        <div id="msgBox" class="message"></div>
+    </div>
+
+    <!-- 預覽結果區 -->
+    <div class="container">
+        <h2>📊 目前報名結果預覽 (<span id="regCount">0</span> 人)</h2>
+        <div id="tableContainer" class="table-responsive"></div>
+    </div>
+</div>
+
+<script>
+    const tableContainer = document.getElementById('tableContainer');
+    if (tableContainer) {
+        tableContainer.innerHTML = "<table><thead><tr><th>報名時間</th><th>玩家暱稱</th><th>指定成員</th><th>第一武學</th><th>第二武學</th><th>第一志願</th><th>第二志願</th></tr></thead><tbody id='previewTableBody'></tbody></table>";
+    }
+
+    const GOOGLE_FORM_URL = "https://docs.google.com/forms/u/0/d/1LvhemO_CRBAcQqFsIijcxbyDCoTTG-OSRiBtACNSZUA/formResponse";
+    const ENTRY_FIELDS = {
+        name: "entry.84277837",      
+        partner: "entry.1073660697",   
+        primary: "entry.2146790999",   
+        secondary: "entry.873433142", 
+        choice1: "entry.1267281283",   
+        choice2: "entry.436720027"    
+    };
+
+    let dbData = JSON.parse(localStorage.getItem('guildWarV2Data')) || Array();
+    renderTable();
+
+    document.getElementById('signupForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const n = document.getElementById('playerName').value.trim();
+        const pt = document.getElementById('partnerName').value.trim() || "無";
+        const p = document.getElementById('primaryMartial').value;
+        const s = document.getElementById('secondaryMartial').value;
+        const c1 = document.getElementById('firstChoice').value;
+        const c2 = document.getElementById('secondChoice').value;
+        const mBox = document.getElementById('msgBox');
+
+        mBox.className = "message";
+
+        if (p === s) { showTip("❌ 錯誤：第一武學與第二武學不能相同！", "error"); return; }
+        if (c1 === c2) { showTip("❌ 錯誤：第一志願與第二志願分隊不能重複！", "error"); return; }
+        if (dbData.some(function(item) { return item.name.toLowerCase() === n.toLowerCase(); })) { showTip("❌ 錯誤：此玩家暱稱已經報名過囉！", "error"); return; }
+
+        const currentTime = new Date().toLocaleString('zh-TW', { hour12: false });
+        const record = { time: currentTime, name: n, partner: pt, primary: p, secondary: s, choice1: c1, choice2: c2 };
+
+        if (GOOGLE_FORM_URL.indexOf("您的表單ID") === -1) {
+            const fData = new FormData();
+            fData.append(ENTRY_FIELDS.name, n);
+            fData.append(ENTRY_FIELDS.partner, pt);
+            fData.append(ENTRY_FIELDS.primary, p);
+            fData.append(ENTRY_FIELDS.secondary, s);
+            fData.append(ENTRY_FIELDS.choice1, c1);
+            fData.append(ENTRY_FIELDS.choice2, c2);
+            fetch(GOOGLE_FORM_URL, { method: "POST", body: fData, mode: "no-cors" }).catch(function(err) { console.log(err); });
+        }
+
+        dbData.push(record);
+        localStorage.setItem('guildWarV2Data', JSON.stringify(dbData));
+        renderTable();
+
+        showTip("🎉 報名成功！資料已同步登錄至預覽區與後台。", "success");
+        document.getElementById('signupForm').reset();
+    });
+
+    document.getElementById('exportBtn').addEventListener('click', function() {
+        if (dbData.length === 0) { alert("目前沒有任何報名資料可以匯出！"); return; }
+
+        const formatted = dbData.map(function(x, i) {
+            return {
+                "序號": i + 1, 
+                "報名時間": x.time, 
+                "玩家遊戲暱稱": x.name, 
+                "指定同隊成員": x.partner,
+                "第一主修武學": x.primary, 
+                "第二備用武學": x.secondary, 
+                "分隊第一志願": x.choice1, 
+                "分隊第二志願": x.choice2
+            };
+        });
+
+        const ws = XLSX.utils.json_to_sheet(formatted);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "報名名單");
+
+        ws['!cols'] = [{wch:6}, {wch:22}, {wch:18}, {wch:18}, {wch:15}, {wch:15}, {wch:15}, {wch:15}];
+        XLSX.writeFile(wb, "工會戰報名表_" + new Date().toISOString().slice(0,10) + ".xlsx");
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', function() {
+        if (confirm("確定要清空「所有」報名紀錄嗎？此動作無法復原！")) {
+            dbData = Array();
+            localStorage.removeItem('guildWarV2Data');
+            renderTable();
+            showTip("🧹 已清空本地所有報名預覽資料。", "success");
+        }
+    });
+
+    function renderTable() {
+        const body = document.getElementById('previewTableBody');
+        if (!body) return;
+        
+        document.getElementById('regCount').textContent = dbData.length;
+
+        if (dbData.length === 0) {
+            body.innerHTML = "<tr><td colspan='7' class='no-data'>📭 目前尚無人報名</td></tr>";
+            return;
+        }
+
+        body.innerHTML = "";
+        const list = [].concat(dbData).reverse();
+        list.forEach(function(i) {
+            const r = document.createElement('tr');
+            r.innerHTML = "<td>" + i.time + "</td><td><b>" + i.name + "</b></td><td>" + i.partner + "</td><td>" + i.primary + "</td><td>" + i.secondary + "</td><td>" + i.choice1 + "</td><td>" + i.choice2 + "</td>";
+            body.appendChild(r);
+        });
+    }
+
+    function showTip(text, type) {
+        const m = document.getElementById('msgBox');
+        if (m) {
+            m.textContent = text; 
+            m.className = "message " + type;
+            if (type === "success") { setTimeout(function() { m.style.display = 'none'; }, 5000); }
+        }
+    }
+</script>
+</body>
+</html>
