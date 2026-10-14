@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>工會戰分隊報名系統 V2</title>
-    <!-- 引入官方穩定版 SheetJS 用於導出 Excel -->
-    <script src="https://jsdelivr.net"></script>
     <style>
         :root {
             --primary-color: #3498db; --secondary-color: #2c3e50; --background-color: #ecf0f1;
@@ -125,7 +123,7 @@
             </div>
             <div class="btn-container">
                 <button type="submit" class="btn-submit">確認送出報名</button>
-                <button type="button" id="exportBtn" class="btn-export">匯出 Excel</button>
+                <button type="button" id="exportBtn" class="btn-export"></button>
                 <button type="button" id="clearBtn" class="btn-clear">清空資料</button>
             </div>
         </form>
@@ -140,6 +138,7 @@
 </div>
 
 <script>
+
     const tableContainer = document.getElementById('tableContainer');
     if (tableContainer) {
         tableContainer.innerHTML = "<table><thead><tr><th>報名時間</th><th>玩家暱稱</th><th>指定成員</th><th>第一武學</th><th>第二武學</th><th>第一志願</th><th>第二志願</th></tr></thead><tbody id='previewTableBody'></tbody></table>";
@@ -195,30 +194,6 @@
 
         showTip("🎉 報名成功！資料已同步登錄至預覽區與後台。", "success");
         document.getElementById('signupForm').reset();
-    });
-
-    document.getElementById('exportBtn').addEventListener('click', function() {
-        if (dbData.length === 0) { alert("目前沒有任何報名資料可以匯出！"); return; }
-
-        const formatted = dbData.map(function(x, i) {
-            return {
-                "序號": i + 1, 
-                "報名時間": x.time, 
-                "玩家遊戲暱稱": x.name, 
-                "指定同隊成員": x.partner,
-                "第一主修武學": x.primary, 
-                "第二備用武學": x.secondary, 
-                "分隊第一志願": x.choice1, 
-                "分隊第二志願": x.choice2
-            };
-        });
-
-        const ws = XLSX.utils.json_to_sheet(formatted);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "報名名單");
-
-        ws['!cols'] = [{wch:6}, {wch:22}, {wch:18}, {wch:18}, {wch:15}, {wch:15}, {wch:15}, {wch:15}];
-        XLSX.writeFile(wb, "工會戰報名表_" + new Date().toISOString().slice(0,10) + ".xlsx");
     });
 
     document.getElementById('clearBtn').addEventListener('click', function() {
